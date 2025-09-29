@@ -6,7 +6,8 @@ A template for flask applications structured in the Model View Controller patter
 
 # Dependencies
 * Python3/pip3
-* Packages listed in requirements.txt
+* Packages listed in requirements.txt 
+  * Includes tabulate (for CLI tables)
 
 # Installing Dependencies
 ```bash
@@ -62,25 +63,84 @@ You just need create a manager command function, for example:
 ```python
 # inside wsgi.py
 
-user_cli = AppGroup('user', help='User object commands')
+@app.cli.command("create", help="Creates a user")
+@click.argument("username", default="bob")
+@click.argument("password", default="bobpass")
+@click.argument("role", default="user")
+def create_user_command(username, password, role):
 
-@user_cli.cli.command("create-user")
-@click.argument("username")
-@click.argument("password")
-def create_user_command(username, password):
-    create_user(username, password)
-    print(f'{username} created!')
+    if role not in ['user', 'student', 'staff']:
+        print("Invalid role. Must be 'user', 'student', or 'staff'.")
+        return
+        
+    if User.query.filter_by(username=username).first():
+        print("Username already exists.")
+        return
+        
+    if role == 'student':
+        new_user = Student(username=username, password=password)
+    elif role == 'staff':
+        new_user = Staff(username=username, password=password)
+    else:
+        new_user = User(username=username, password=password, role='user')
 
-app.cli.add_command(user_cli) # add the group to the cli
+    db.session.add(new_user)
+    db.session.commit()
+
+    print(f"Created {role} {new_user.id}: {username} !")
+    return new_user
 
 ```
 
 Then execute the command invoking with flask cli with command name and the relevant parameters
 
 ```bash
-$ flask user create bob bobpass
+#----------General Commands----------
+
+# Create a new user
+$ flask create <username> <password> <role>
+
+# List all users or filter by role
+$ flask list
+$ flask list --type student
+$ flask list --type staff
+
+#----------User Commands----------
+
+# View student leaderboard with positions
+$ flask user leaderboard
+
+#----------Student Commands----------
+
+# Request hours
+$ flask student request-hours <student_id> <hours>
+
+# View personal log 
+$ flask student view-log <student_id>
+
+# View personal accolades
+$ flask student view-accolades <student_id>
+
+#----------Staff Commands----------
+
+# Log student hours directly without a previous request
+$ flask staff log-hours <staff_id> <student_id> <hours>
+
+# View all requested hours
+$ flask staff view-all-requests
+
+# Confirm requested hours
+$ flask staff confirm-hours <staff_if> <log_id>
+
+# Deny requested hours
+$ flask staff deny-hours <staff_id> <log_id>
+
+
 ```
 
+```bash
+$ flask user leaderboard
+```
 
 # Running the Project
 
