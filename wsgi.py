@@ -52,6 +52,7 @@ def init():
     db.session.add_all(students + staff)
     db.session.commit()
    
+    # Populating system with existing hour logs and accolades
 
     hours = [
         (staff[0], students[0], 10), # staff[0] is sally with ID 11, students[0] is alice with ID 1
@@ -171,6 +172,7 @@ app.cli.add_command(user_cli)
 
 student_cli = AppGroup('student', help='Commands available to students only.')
 
+
 # Command to request hours
 # flask student request-hours <student_id> <hours>
 
@@ -266,6 +268,7 @@ def view_accolades_command(student_id):
 
         
 app.cli.add_command(student_cli)
+
 
 
 """ ----------------- Staff Commands ----------------- """
