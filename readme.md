@@ -130,7 +130,7 @@ $ flask staff log-hours <staff_id> <student_id> <hours>
 $ flask staff view-all-requests
 
 # Confirm requested hours
-$ flask staff confirm-hours <staff_if> <log_id>
+$ flask staff confirm-hours <staff_id> <log_id>
 
 # Deny requested hours
 $ flask staff deny-hours <staff_id> <log_id>
