@@ -94,53 +94,71 @@ def create_user_command(username, password, role):
 
 Then execute the command invoking with flask cli with command name and the relevant parameters
 
-```bash
-#----------General Commands----------
+
+# ----------General Commands----------
 
 # Create a new user
+```bash
 $ flask create <username> <password> <role>
-
-# List all users or filter by role
-$ flask list
-$ flask list --type student
-$ flask list --type staff
-
-#----------User Commands----------
-
-# View student leaderboard with positions
-$ flask user leaderboard
-
-#----------Student Commands----------
-
-# Request hours
-$ flask student request-hours <student_id> <hours>
-
-# View personal log 
-$ flask student view-log <student_id>
-
-# View personal accolades
-$ flask student view-accolades <student_id>
-
-#----------Staff Commands----------
-
-# Log student hours directly without a previous request
-$ flask staff log-hours <staff_id> <student_id> <hours>
-
-# View all requested hours
-$ flask staff view-all-requests
-
-# Confirm requested hours
-$ flask staff confirm-hours <staff_id> <log_id>
-
-# Deny requested hours
-$ flask staff deny-hours <staff_id> <log_id>
-
-
 ```
 
+# List all users or filter by role
+```bash
+$ flask list
+```
+```bash
+$ flask list --type student
+```
+```bash
+$ flask list --type staff
+```
+
+# ----------User Commands----------
+
+# View student leaderboard with positions
 ```bash
 $ flask user leaderboard
 ```
+
+# ----------Student Commands----------
+
+# Request hours
+```bash
+$ flask student request-hours <student_id> <hours>
+```
+
+# View personal log 
+```bash
+$ flask student view-log <student_id>
+```
+
+# View personal accolades
+```bash
+$ flask student view-accolades <student_id>
+```
+
+# ----------Staff Commands----------
+
+# Log student hours directly without a previous request
+```bash
+$ flask staff log-hours <staff_id> <student_id> <hours>
+```
+
+# View all requested hours
+```bash
+$ flask staff view-all-requests
+```
+
+# Confirm requested hours
+```bash
+$ flask staff confirm-hours <staff_id> <log_id>
+```
+
+# Deny requested hours
+```bash
+$ flask staff deny-hours <staff_id> <log_id>
+```
+
 
 # Running the Project
 
