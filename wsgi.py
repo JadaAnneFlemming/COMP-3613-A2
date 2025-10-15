@@ -3,11 +3,19 @@ from flask.cli import with_appcontext, AppGroup
 
 from App.database import db, get_migrate
 
+
 from App.models.user import *
 from App.models.student import *
 from App.models.staff import *
 from App.models.hour_log import *
 from App.models.accolade import *
+
+from App.controllers.user import *
+from App.controllers.student import *
+from App.controllers.staff import *
+from App.controllers.hour_log import *
+from App.controllers.accolade import *
+
 
 
 from App.main import create_app
@@ -24,60 +32,12 @@ migrate = get_migrate(app)
 @app.cli.command("init", help="Creates and initializes the database.")
 def init():
     initialize()
-
-    # Populating system with existing users
-
-    students = [
-        Student(username='alice', password='alicepass'), #ID 1
-        Student(username='rob', password='robpass'), #ID 2
-        Student(username='carol', password='carolpass'), #ID 3
-        Student(username='dave', password='davepass'), #ID 4
-        Student(username='eve', password='evepass'), #ID 5
-        Student(username='frank', password='frankpass'), #ID 6
-        Student(username='grace', password='gracepass'), #ID 7
-        Student(username='heidi', password='heidipass'), #ID 8
-        Student(username='ivan', password='ivanpass'), #ID 9
-        Student(username='judy', password='judypass') #ID 10
-    ]
-
-    staff = [
-        Staff(username='sally', password='sallypass'), #ID 11
-        Staff(username='steve', password='stevepass'), #ID 12
-        Staff(username='john', password='johnpass'), #ID 13
-        Staff(username='laura', password='laurapass'), #ID 14
-        Staff(username='mike', password='mikepass') #ID 15
-
-    ]
-
-    db.session.add_all(students + staff)
-    db.session.commit()
-   
-    # Populating system with existing hour logs and accolades
-
-    hours = [
-        (staff[0], students[0], 10), # staff[0] is sally with ID 11, students[0] is alice with ID 1
-        (staff[0], students[1], 15), # staff[0] is sally with ID 11, students[1] is rob with ID 2
-        (staff[1], students[2], 20), # staff[1] is steve with ID 12, students[2] is carol with ID 3
-        (staff[1], students[3], 12), # staff[1] is steve with ID 12, students[3] is dave with ID 4
-        (staff[2], students[4], 18), # staff[2] is john with ID 13, students[4] is eve with ID 5
-        (staff[2], students[5], 25), # staff[2] is john with ID 13, students[5] is frank with ID 6
-        (staff[3], students[6], 8), # staff[3] is laura with ID 14, students[6] is grace with ID 7
-        (staff[3], students[7], 16), # staff[3] is laura with ID 14, students[7] is heidi with ID 8
-        (staff[4], students[8], 22)  # staff[4] is mike with ID 15, students[8] is ivan with ID 9
-    ]
-
-    for s, student, h in hours:
-        log = HourLog(staff=s, student=student, hours=h, status="confirmed", reviewed_at=datetime.utcnow())
-        db.session.add(log)
-        student.total_hours += h  
-        award_accolades(student)
-
-    db.session.commit()
-    print('Database intialized!')
+    print("Database initialized!")
 
 
 
 """---------------- General Commands ----------------"""
+# Commands that are for testing and administration purposes only
 
 # Command to create a new student or staff account
 # flask create <username> <password> <role>
@@ -87,25 +47,11 @@ def init():
 @click.argument("password", default="bobpass")
 @click.argument("role", default="student")
 def create_user_command(username, password, role):
-
-    if role not in ['student', 'staff']:
-        print("Invalid role! Must be 'student' or 'staff'.")
-        return
-        
-    if User.query.filter_by(username=username).first():
-        print("Username already exists!")
-        return
-        
-    if role == 'student':
-        new_user = Student(username=username, password=password)
-    elif role == 'staff':
-        new_user = Staff(username=username, password=password)
-
-    db.session.add(new_user)
-    db.session.commit()
-
-    print(f"Created new {role} {username} with ID {new_user.id}!")
-
+    new_user = create_user(username, password, role)
+    if new_user:
+        print(f"Created new {role} {username} with ID {new_user.id}!")
+    else:
+        print("User creation failed!")
 
 
 # Command to list all users of filter by role
@@ -115,14 +61,7 @@ def create_user_command(username, password, role):
 @app.cli.command("list", help="List all users in the system, or only those with a specific role.")
 @click.option("--type", default="all", help="Roles to filter by: student, staff or all (default: all).")
 def list_user_command(type):
-
-    if type == "student":
-        users = Student.query.all()
-    elif type == "staff":
-        users = Staff.query.all()
-    else:
-        users = User.query.all()
-
+    users = list_users(type)
     
     if not users:
         print("No users found!")
@@ -137,7 +76,7 @@ def list_user_command(type):
 
 
 """---------------- User Commands ----------------"""
-# Commands that can be used by all role types
+# Commands that can be used by all users
 
 user_cli = AppGroup('user', help='Commands available to all users.') 
 
@@ -147,21 +86,13 @@ user_cli = AppGroup('user', help='Commands available to all users.')
 
 @user_cli.command("leaderboard", help="View student leaderboard ranked by total confirmed hours logged.")
 def leaderboard_command():
+    leaderboard = get_leaderboard()
 
-    students = Student.query.order_by(Student.total_hours.desc()).all()
-    table = []
-    previous_hours = None
-    rank = 0
-
-    for student in students:
-        if student.total_hours != previous_hours:
-            rank += 1
-            previous_hours = student.total_hours
-        table.append([rank, student.username, student.total_hours])
-
-    print("Student Leaderboard")
-    print(tabulate(table, headers=["Rank", "Student", "Total Hours"], tablefmt="grid"))
-
+    if leaderboard:
+        print("Student Leaderboard")
+        print(tabulate(leaderboard, headers=["Rank", "Student", "Total Hours"], tablefmt="grid"))
+    else:
+        print("No students found!")
 
 app.cli.add_command(user_cli)
 
@@ -181,21 +112,12 @@ student_cli = AppGroup('student', help='Commands available to students only.')
 @click.argument("hours", type=int)
 def request_hours_command(student_id, hours):
 
-    student = get_student(student_id)
+    log = request_hours(student_id, hours)
 
-    if not student:
-        print(f"Student with id {student_id} not found!")
-        return
-    
-    if hours <= 0:
-        print("Requested hours must be greater than zero!")
-        return
-    
-    log = HourLog(hours=hours, student=student, status="requested")
-    db.session.add(log)
-    db.session.commit()
-
-    print(f"Student {student.username} requested {hours} hours!")
+    if log:
+        print(f"Student {log.student.username} requested {log.hours} hours!")
+    else:
+        print("Invalid student ID or hours <= 0!")
 
 
 # Command to view personal log (shows all hours requested/confirmed/denied for student)
@@ -205,31 +127,23 @@ def request_hours_command(student_id, hours):
 @click.argument("student_id", type=int)
 def view_student_requests_command(student_id):
 
-    student = get_student(student_id)
-
-    if not student:
-        print(f"Student with id {student_id} not found!")
-        return
+    logs = get_student_logs(student_id)
+    if logs:
+        table = []
+        for log in logs:
+            if log.staff:
+                staff_name = log.staff.username
+            else:
+                staff_name = "pending"
     
-    logs = HourLog.query.filter_by(student=student).all()
+            row = [log.id, log.hours, log.status, staff_name, log.format_created_time(), log.format_reviewed_time()]
+            table.append(row)
 
-    if not logs:
-        print(f"No requested logs found for student {student.username}!")
-        return
-        
-    table = []
-    for log in logs:
-        if log.staff:
-            staff_name = log.staff.username
-        else:
-            staff_name = "pending"
-    
-        row = [log.id, log.hours, log.status, staff_name, log.format_created_time(), log.format_reviewed_time()]
-        table.append(row)
-
-    print(f"Hour Logs for {student.username}:")
-    print(tabulate(table, headers=["Log ID", "Hours", "Status", "Confirmed By", "Requested At", "Reviewed At"], tablefmt="grid"))
-
+        print(f"Hour Logs for {log.student.username}:")
+        print(tabulate(table, headers=["Log ID", "Hours", "Status", "Confirmed By", "Requested At", "Reviewed At"], tablefmt="grid"))
+    else:
+        print("Invalid student ID or no logs found!")
+       
 
 # Command to view own accolades
 # flask student view-accolades <student_id>
@@ -237,34 +151,19 @@ def view_student_requests_command(student_id):
 @student_cli.command("view-accolades", help="View all personal accolades earned.")
 @click.argument("student_id", type=int)
 def view_accolades_command(student_id):
-    
-    milestones = [10, 20, 50]
 
-    student = get_student(student_id)
+    accolades = get_student_accolades(student_id)
 
-    if not student:
-        print(f"Student with id {student_id} not found!")
-        return
-    
-    accolades = []
+    if accolades:
+        table = []
+        for acc in accolades:
+            row = [acc.milestone_name(), acc.milestone, acc.format_awarded_time()]
+            table.append(row)
+        print(f"Accolades for {accolades[0].student.username}:")
+        print(tabulate(table, headers=["Accolade", "Milestone", "Awarded At"], tablefmt="grid"))
 
-    for m in milestones:
-        for acc in student.accolades:
-            if acc.milestone == m:
-                accolades.append(acc)
-
-    if not accolades:
-        print(f"{student.username} has not earned any accolades yet!")
-        return
-    
-    table = []
-    for acc in accolades:
-        row = [acc.milestone_name(), acc.milestone, acc.format_awarded_time()]
-        table.append(row)
-
-    
-    print(f"Accolades for {student.username}")
-    print(tabulate(table, headers=["Accolade", "Milestone", "Awarded At"], tablefmt="grid"))
+    else:
+        print("Invalid student ID or no accolades found!")
 
         
 app.cli.add_command(student_cli)
@@ -285,45 +184,35 @@ staff_cli = AppGroup('staff', help='Commands available to staff only.')
 @click.argument("hours", type=int)
 def log_hours_command(staff_id, student_id, hours):
 
-    staff = get_staff(staff_id)
-    student = get_student(student_id)
+    log = log_hours(staff_id, student_id, hours)
 
-    if not staff or not student:
-        print(f"Invalid staff or student ID!")
-        return
-    
-    log = HourLog(hours=hours, student=student, staff=staff, status="confirmed", reviewed_at=datetime.utcnow())
-    db.session.add(log)
-    student.total_hours += hours
-    award_accolades(student)
-   
-    db.session.commit()
+    if log:
+        print(f"{log.hours} hours has been logged for {log.student.username} by {log.staff.username}!")
+    else:
+        print("Invalid staff or student ID, or hours <= 0!")
 
-    print(f"{hours} hours has been logged for {student.username} by {staff.username}!")
-    
 
 # Command to view all outstanding requests from students
 # flask staff view-all-requests
 
 @staff_cli.command("view-all-requests", help="View all outstanding student requests.")
 def view_all_requests_command():
+
+    logs = get_pending_logs()
+
+    if logs:
+        table = []
+        for log in logs:
+            student_name = log.student.username
+            row = [log.id, student_name, log.hours, log.status, log.format_created_time(), log.format_reviewed_time()]
+            table.append(row)
+
+        print(tabulate(table, headers=["Log ID", "Student", "Hours", "Status", "Requested At", "Reviewed At"], tablefmt="grid"))
     
-    logs = HourLog.query.filter_by(status="requested").all()
-
-    if not logs:
-        print("No pending logs!")
-        return
+    else:
+        print("No pending requests found!")
     
-    table = []
-    for log in logs:
-        student_name = log.student.username
-        row = [log.id, student_name, log.hours, log.status, log.format_created_time(), log.format_reviewed_time()]
-        table.append(row)
-
-    print(tabulate(table, headers=["Log ID", "Student", "Hours", "Status", "Requested At", "Reviewed At"], tablefmt="grid"))
-
-
-
+    
 
 # Command to confirm hours for a student request
 # flask staff confirm-hours <staff_id> <log_id>
@@ -332,24 +221,12 @@ def view_all_requests_command():
 @click.argument("log_id", type=int)
 def confirm_hours_command(staff_id, log_id):
 
-    staff = get_staff(staff_id)
-    log = get_log (log_id)
+    log = confirm_hours(staff_id, log_id)
 
-    if not staff or not log or log.status != 'requested':
-        print(f"Invalid staff id or log!")
-        return
-    
-    log.status = "confirmed"
-    log.staff = staff
-    log.reviewed_at = datetime.utcnow()
-    log.student.total_hours += log.hours
-    award_accolades(log.student)
-   
-    db.session.commit()
-   
-    print(f"Confirmed {log.hours} hours for {log.student.username} by {staff.username}!")
-
-
+    if log:
+        print(f"Confirmed {log.hours} hours for {log.student.username} by {log.staff.username}!")
+    else:
+        print("Invalid staff id or log id!")
 
 
 # Command to deny hours for a student request
@@ -359,19 +236,13 @@ def confirm_hours_command(staff_id, log_id):
 @click.argument("log_id", type=int)
 def deny_hours_command(staff_id, log_id):
 
-    staff = get_staff(staff_id)
-    log = get_log (log_id)
+    log = deny_hours(staff_id, log_id)
 
-    if not staff or not log or log.status != 'requested':
-        print(f"Invalid staff id or log!")
-        return
-    
-    log.status = "denied"
-    log.staff = staff
-    log.reviewed_at = datetime.utcnow()
-    db.session.commit()
+    if log:
+        print(f"Denied {log.hours} hours for {log.student.username} by {log.staff.username}!")
+    else:
+        print("Invalid staff id or log id!")
 
-    print(f"Denied {log.hours} hours for {log.student.username} by {staff.username}!")
 
 app.cli.add_command(staff_cli)
 

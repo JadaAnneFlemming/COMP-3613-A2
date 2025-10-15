@@ -30,7 +30,3 @@ class HourLog(db.Model):
         if self.reviewed_at:
             return self.reviewed_at.strftime("%Y-%m-%d %H:%M")
         return "Not reviewed yet"
-
-
-def get_log (log_id):
-    return HourLog.query.get(log_id)

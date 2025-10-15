@@ -21,9 +21,3 @@ class Student(User):
 
 
 
-
-
-def get_student(student_id):
-    return Student.query.get(student_id)
-
-

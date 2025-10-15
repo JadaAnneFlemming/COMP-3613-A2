@@ -19,8 +19,6 @@ class Staff(User):
 
 
 
-def get_staff(staff_id):
-    return Staff.query.get(staff_id)
 
 
 

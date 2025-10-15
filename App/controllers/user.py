@@ -1,11 +1,35 @@
-from App.models import User
+from App.models import User, Student, Staff
 from App.database import db
 
-def create_user(username, password):
-    newuser = User(username=username, password=password)
-    db.session.add(newuser)
+def create_user(username, password, role):
+    if role not in ['student', 'staff']:
+        print("Invalid role! Must be 'student' or 'staff'.")
+        return
+        
+    if User.query.filter_by(username=username).first():
+        print("Username already exists!")
+        return
+        
+    if role == 'student':
+        new_user = Student(username=username, password=password)
+    elif role == 'staff':
+        new_user = Staff(username=username, password=password)
+
+    db.session.add(new_user)
     db.session.commit()
-    return newuser
+    return new_user
+
+
+def list_users(type):
+    if type == "student":
+        return Student.query.all()
+    elif type == "staff":
+        return Staff.query.all()
+    else:
+        return User.query.all()
+
+
+   
 
 def get_user_by_username(username):
     result = db.session.execute(db.select(User).filter_by(username=username))
