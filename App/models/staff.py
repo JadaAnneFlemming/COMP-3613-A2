@@ -14,6 +14,13 @@ class Staff(User):
     def __init__(self, username, password):
         super().__init__(username, password, role='staff')
 
+    def get_json(self):
+        return{
+            'id': self.id,
+            'username': self.username,
+            'role': self.role
+        }
+    
     def __repr__(self):
         return f"<Staff {self.id} - {self.username}>"
 

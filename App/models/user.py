@@ -12,7 +12,7 @@ class User(db.Model):
     __mapper_args__ = {
         'polymorphic_identity':'user',
         'polymorphic_on':role
-    }
+    } 
 
     def __init__(self, username, password, role):
         self.username = username
